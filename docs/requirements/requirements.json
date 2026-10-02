@@ -1,0 +1,105 @@
+{
+  "product": "Outcome OS",
+  "version": "0.1.0",
+  "vertical": "operational-runbook",
+  "items": [
+    {
+      "id": "REQ-ACCOUNT",
+      "statement": "A person can create an account and sign in.",
+      "status": "implemented",
+      "code": "apps/platform/src/auth/identity.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-ORG",
+      "statement": "An account can create an organization and become its owner.",
+      "status": "implemented",
+      "code": "apps/platform/src/auth/identity.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-DISCOVERY",
+      "statement": "A problem stays in discovery until required answers are specific.",
+      "status": "implemented",
+      "code": "packages/domain/src/discovery.ts",
+      "test": "packages/domain/src/domain.test.ts"
+    },
+    {
+      "id": "REQ-SOLUTION",
+      "statement": "A solution is composed from the capability registry.",
+      "status": "implemented",
+      "code": "packages/domain/src/solution.ts",
+      "test": "packages/domain/src/domain.test.ts"
+    },
+    {
+      "id": "REQ-PRICE",
+      "statement": "Price is calculated by the pricing policy and copied into the proposal.",
+      "status": "implemented",
+      "code": "packages/domain/src/pricing.ts",
+      "test": "packages/domain/src/domain.test.ts"
+    },
+    {
+      "id": "REQ-ACCEPT",
+      "statement": "Accepting a proposal creates a project and task graph without pretending payment was collected.",
+      "status": "implemented",
+      "code": "apps/platform/src/services/engagement.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-EXECUTE",
+      "statement": "Tasks execute, record cost and duration, and can be observed.",
+      "status": "implemented",
+      "code": "apps/platform/src/services/orchestrator.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-VERIFY",
+      "statement": "A different agent verifies the package and can fail it.",
+      "status": "implemented",
+      "code": "packages/domain/src/verify.ts",
+      "test": "packages/domain/src/domain.test.ts"
+    },
+    {
+      "id": "REQ-RECOVER",
+      "statement": "A failed package is repaired once or escalated. A running task can be resumed.",
+      "status": "implemented",
+      "code": "apps/platform/src/services/orchestrator.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-OUTCOME",
+      "statement": "Delivery records a baseline. A person records the after-value.",
+      "status": "implemented",
+      "code": "packages/domain/src/outcomes.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-BLUEPRINT",
+      "statement": "Delivery stores a candidate blueprint and promotion is rejected.",
+      "status": "implemented",
+      "code": "packages/domain/src/blueprint.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-TENANT",
+      "statement": "One organization cannot read another organization's engagement.",
+      "status": "implemented",
+      "code": "apps/platform/src/db/database.ts",
+      "test": "apps/platform/test/loop.test.ts"
+    },
+    {
+      "id": "REQ-BILLING",
+      "statement": "Invoices and payment collection.",
+      "status": "planned",
+      "code": null,
+      "test": null
+    },
+    {
+      "id": "REQ-DEPLOY",
+      "statement": "Deploy customer software to a hosted environment.",
+      "status": "planned",
+      "code": null,
+      "test": null
+    }
+  ]
+}

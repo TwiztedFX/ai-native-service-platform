@@ -1,0 +1,27 @@
+{
+  "name": "ai-native-service-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Outcome OS, an AI-native service production platform. The first vertical turns an operational problem into a verified runbook.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node --watch apps/platform/src/server.ts",
+    "start": "node apps/platform/src/server.ts",
+    "test": "node --test packages/domain/src/domain.test.ts packages/providers/src/providers.test.ts apps/platform/test/loop.test.ts",
+    "typecheck": "tsc --noEmit -p packages/domain/tsconfig.json && tsc --noEmit -p packages/providers/tsconfig.json && tsc --noEmit -p apps/platform/tsconfig.json",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

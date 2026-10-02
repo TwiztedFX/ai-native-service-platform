@@ -10,6 +10,7 @@ const state = {
   notice: "",
   busy: false,
   mode: "register",
+  aiProvider: "not_configured",
 };
 
 const stages = [
@@ -117,7 +118,11 @@ function workspace(org) {
   }
   return `<section class="panel">
       <div class="row"><strong>${escapeHtml(org.name)}</strong><span class="meta">${escapeHtml(org.role)}</span></div>
-      <p class="meta">Model enrichment is off until an AI provider key is configured. Pricing and delivery use the deterministic runbook engine.</p>
+      <p class="meta">${
+        state.aiProvider === "configured"
+          ? "A model key is configured. Summaries are optional and do not change the price."
+          : "Model enrichment is off until an AI provider key is configured. Pricing and delivery use the deterministic runbook engine."
+      }</p>
     </section>
     <section class="grid two">
       <form id="intake" class="panel grid">
@@ -143,6 +148,12 @@ function detailPanel() {
     <div class="stages">${stages.map((item) => `<span class="${item === stage || (stage === "needs_human" && item === "in_delivery") ? "on" : ""}">${escapeHtml(item.replaceAll("_", " "))}</span>`).join("")}</div>
     <h2>Discovery</h2>
     <p>${escapeHtml(detail.engagement.problem)}</p>
+    ${detail.engagement.narrative ? `<p>${escapeHtml(detail.engagement.narrative)}</p>` : ""}
+    ${
+      state.aiProvider === "configured"
+        ? `<button id="summarize" type="button">Write summary</button>`
+        : ""
+    }
     ${detail.facts.length ? `<ul>${detail.facts.map((fact) => `<li>${escapeHtml(fact.value)} <span class="meta">(${escapeHtml(fact.source)})</span></li>`).join("")}</ul>` : ""}
     <form id="answers" class="grid">
       ${detail.questions.map((question) => `<label><span>${escapeHtml(question.prompt)}</span><textarea name="${escapeHtml(question.key)}">${escapeHtml(question.answer ?? "")}</textarea>${question.issue && question.answer ? `<span class="error">${escapeHtml(question.issue)}</span>` : ""}</label>`).join("")}
@@ -189,6 +200,16 @@ function projectPanel() {
 }
 
 function bind() {
+  document.querySelector("#summarize")?.addEventListener("click", () =>
+    act(async () => {
+      const result = await api(
+        `/api/organizations/${state.orgId}/engagements/${state.detail.engagement.id}/narrative`,
+        { method: "POST", body: { privacy: "standard" } },
+      );
+      state.detail.engagement.narrative = result.narrative;
+      state.notice = "Summary stored. The price is unchanged.";
+    }),
+  );
   document.querySelector("#logout")?.addEventListener("click", () =>
     act(() =>
       api("/api/auth/logout", { method: "POST" }).then(() => {
@@ -359,9 +380,20 @@ async function act(work) {
   }
 }
 
-refreshSession()
-  .then(refreshEngagements)
+async function refreshHealth() {
+  const health = await api("/api/health");
+  state.aiProvider = health.aiProvider === "configured" ? "configured" : "not_configured";
+}
+
+refreshHealth()
   .catch(() => {
-    state.user = null;
+    state.aiProvider = "not_configured";
   })
-  .finally(render);
+  .finally(() => {
+    refreshSession()
+      .then(refreshEngagements)
+      .catch(() => {
+        state.user = null;
+      })
+      .finally(render);
+  });

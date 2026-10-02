@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { capabilitiesForVertical, routeModel } from "@platform/domain";
-import { createAiClient } from "@platform/providers";
+import { createAiClient, ProviderResponseError } from "@platform/providers";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { ZodError, z } from "zod";
 import {
@@ -120,6 +120,11 @@ export function buildApp(options: {
       return reply
         .status(error.status)
         .send({ error: { code: error.code, message: error.message, details: error.details } });
+    }
+    if (error instanceof ProviderResponseError) {
+      return reply
+        .status(502)
+        .send({ error: { code: error.code, message: error.message, details: null } });
     }
     if (error instanceof ZodError) {
       return reply.status(400).send({
@@ -267,6 +272,9 @@ export function buildApp(options: {
     });
     if (decision.provider !== "openai-compatible") {
       throw new AppError(409, "PROVIDER_NOT_CONFIGURED", decision.reason);
+    }
+    if (!config.aiModel?.trim()) {
+      throw new AppError(409, "MODEL_REQUIRED", "Set AI_MODEL to a model id from your provider.");
     }
     const client = createAiClient({
       apiKey: config.aiApiKey,

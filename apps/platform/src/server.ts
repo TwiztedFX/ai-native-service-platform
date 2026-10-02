@@ -1,5 +1,8 @@
 import { buildApp } from "./app.ts";
 import { DataPlane } from "./db/database.ts";
+import { loadEnvFile } from "./env.ts";
+
+loadEnvFile();
 
 const port = Number(process.env.PORT ?? 8787);
 const dataDir = process.env.DATABASE_DIR ?? "./data";
@@ -12,7 +15,7 @@ const app = buildApp({
     cookieSecure: process.env.COOKIE_SECURE === "1",
     aiApiKey: process.env.AI_API_KEY,
     aiBaseUrl: process.env.AI_BASE_URL,
-    aiModel: process.env.AI_MODEL ?? "configured-model",
+    aiModel: process.env.AI_MODEL?.trim() || "",
   },
 });
 

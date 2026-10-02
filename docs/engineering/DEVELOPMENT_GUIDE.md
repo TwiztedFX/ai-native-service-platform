@@ -19,6 +19,8 @@ npm run lint
 
 `npm run dev` serves `http://127.0.0.1:8787` and stores databases under `data/`.
 
+On startup the server reads a gitignored `.env` in the project root. Existing process environment variables win. Copy `.env.example` to `.env` and set `AI_API_KEY` plus `AI_MODEL` when you want narrative summaries. Leave the key empty to stay deterministic. Restart the server after changing `.env`. Do not commit `.env`.
+
 Tests use in-memory SQLite and a reduced scrypt cost. The server uses scrypt cost 16384. Tests do not call a live model. The provider test injects `fetch`.
 
 ## Change rules

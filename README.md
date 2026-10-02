@@ -15,7 +15,7 @@ The first vertical is **operational runbook production**. It is a real loop, not
 | Task graph, execution, repair, human escalation | Implemented and tested |
 | Independent verification and delivery package | Implemented and tested |
 | Outcome baseline and candidate blueprint | Implemented and tested |
-| OpenAI-compatible narrative adapter | Implemented and tested with a fake network client. Inactive unless `AI_API_KEY` is set. It cannot change price or permissions |
+| OpenAI-compatible narrative adapter | Implemented and tested with a fake network client. Inactive unless `AI_API_KEY` is set in the process environment or a gitignored `.env`. It cannot change price or permissions |
 | Billing, subscriptions, white-label brands | Planned. No payment provider is configured, so acceptance is recorded as `accepted_unbilled` |
 | GitHub remote | Blocked. The signed-in token can read repositories for `TwiztedFX` and cannot create one (`403`) |
 

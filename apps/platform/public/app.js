@@ -84,15 +84,16 @@ function render() {
   const org = selectedOrg();
   app.innerHTML = `
     <main class="shell">
-      <header class="top">
+      <header class="mast">
         <div>
-          <h1 class="wordmark">Outcome OS</h1>
-          <p class="lede">Describe an operational problem. The platform produces requirements, a priced proposal, and a verified runbook package.</p>
+          <p class="kicker">Outcome OS</p>
+          <h1 class="wordmark">Operational delivery</h1>
+          <p class="lede">A priced proposal and a verified runbook, from one operational problem.</p>
         </div>
-        <div class="row">${state.user ? `<span>${escapeHtml(state.user.name)}</span><button class="secondary" id="logout" type="button">Sign out</button>` : ""}</div>
+        <div class="identity">${state.user ? `<span>${escapeHtml(state.user.name)}</span><button class="secondary" id="logout" type="button">Sign out</button>` : ""}</div>
       </header>
-      <p class="error">${escapeHtml(state.error)}</p>
-      <p class="meta">${escapeHtml(state.notice)}</p>
+      ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ""}
+      ${state.notice ? `<p class="notice">${escapeHtml(state.notice)}</p>` : ""}
       ${state.user ? workspace(org) : authPanel()}
     </main>`;
   bind();
@@ -100,7 +101,7 @@ function render() {
 
 function authPanel() {
   const register = state.mode === "register";
-  return `<section class="panel grid">
+  return `<section class="panel grid gate">
     <h2>${register ? "Create an account" : "Sign in"}</h2>
     <label><span>Email</span><input id="email" type="email" autocomplete="username"></label>
     ${register ? `<label><span>Your name</span><input id="name" autocomplete="name"></label>` : ""}
@@ -117,7 +118,7 @@ function workspace(org) {
     return `<section class="panel grid"><h2>Create your organization</h2><label><span>Organization name</span><input id="org-name"></label><button id="create-org" type="button">Create organization</button></section>`;
   }
   return `<section class="panel">
-      <div class="row"><strong>${escapeHtml(org.name)}</strong><span class="meta">${escapeHtml(org.role)}</span></div>
+      <div class="orgbar"><strong>${escapeHtml(org.name)}</strong><span class="role">${escapeHtml(org.role)}</span></div>
       <p class="meta">${
         state.aiProvider === "configured"
           ? "A model key is configured. Summaries are optional and do not change the price."
@@ -148,7 +149,7 @@ function detailPanel() {
     <div class="stages">${stages.map((item) => `<span class="${item === stage || (stage === "needs_human" && item === "in_delivery") ? "on" : ""}">${escapeHtml(item.replaceAll("_", " "))}</span>`).join("")}</div>
     <h2>Discovery</h2>
     <p>${escapeHtml(detail.engagement.problem)}</p>
-    ${detail.engagement.narrative ? `<p>${escapeHtml(detail.engagement.narrative)}</p>` : ""}
+    ${detail.engagement.narrative ? `<p class="narrative">${escapeHtml(detail.engagement.narrative)}</p>` : ""}
     ${
       state.aiProvider === "configured"
         ? `<button id="summarize" type="button">Write summary</button>`
@@ -168,10 +169,12 @@ function detailPanel() {
 
 function proposalPanel(proposal) {
   const document = proposal.document;
-  return `<article class="grid">
-    <h2>Proposal · ${escapeHtml(proposal.status)} · ${money(proposal.priceCents)}</h2>
+  return `<article class="quote">
+    <h2>Proposal</h2>
+    <p class="price">${money(proposal.priceCents)}</p>
+    <p class="meta">${escapeHtml(proposal.status)}</p>
     <p>${escapeHtml(document.proposedSolution)}</p>
-    <p class="meta">Fixed project ${money(document.priceCents)}. Monthly maintenance ${money(document.recurringMonthlyCents)} is quoted, not billed. Payment is not collected in this version (${escapeHtml(document.recurringStatus)}).</p>
+    <p class="meta">Fixed project ${money(document.priceCents)}. Monthly maintenance ${money(document.recurringMonthlyCents)} is quoted, not billed (${escapeHtml(document.recurringStatus)}).</p>
     <h3>Exclusions</h3>
     <ul>${document.exclusions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     ${proposal.status === "ready" ? `<button id="accept" type="button">Accept proposal</button>` : ""}

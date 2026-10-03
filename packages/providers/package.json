@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@cursor/sdk": "1.0.35"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
   }

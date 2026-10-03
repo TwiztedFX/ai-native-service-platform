@@ -16,7 +16,7 @@ The first vertical is **operational runbook production**. It is a real loop, not
 | Independent verification and delivery package | Implemented and tested |
 | Outcome baseline and candidate blueprint | Implemented and tested |
 | Blueprint promotion | Requires a passing `eval-operational-runbook-1` report and a human approval note from a role that is not the customer. It does not deploy |
-| OpenAI-compatible narrative adapter | Implemented and tested with a fake network client. Inactive unless `AI_API_KEY` is set in the process environment or a gitignored `.env`. It cannot change price or permissions |
+| Narrative summary | Grok 4.7 is a Cursor model id. A `crsr_` key stays off `api.openai.com`. Other keys still use the OpenAI-compatible client. The summary is stored as text and cannot change price or permissions. Tests use a fake client and do not claim a live model call |
 | Billing | Checkout and webhook are implemented. Without both Stripe secrets, acceptance stays `accepted_unbilled`. `paid` requires a verified Stripe event whose amount matches the proposal |
 | Subscriptions and white-label brands | Planned |
 | GitHub remote | [TwiztedFX/ai-native-service-platform](https://github.com/TwiztedFX/ai-native-service-platform). CI is green. There is no public production host |

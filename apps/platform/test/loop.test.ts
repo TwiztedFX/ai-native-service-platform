@@ -418,6 +418,96 @@ describe("boundaries", () => {
       payload: { privacy: "restricted" },
     });
     expect(restricted.statusCode).toBe(409);
+    const cursorCalls = { n: 0 };
+    const cursorFetch: typeof fetch = async () => {
+      throw new Error("Cursor key must not reach chat completions.");
+    };
+    const cursor = await start(false, {
+      aiApiKey: "crsr_test_key",
+      aiBaseUrl: "https://api.openai.com/v1",
+      aiModel: "",
+      fetchImpl: cursorFetch,
+      cursorRunner: {
+        textOnly: true,
+        async run(input) {
+          cursorCalls.n += 1;
+          assert.equal(input.modelId, "grok-4.7");
+          assert.equal(input.apiKey, "crsr_test_key");
+          return { status: "finished", text: "A stored summary." };
+        },
+      },
+    });
+    const cursorOwner = await ownerWorkspace(cursor.app);
+    const { engagementId: cursorEngagementId } = await readyProject(
+      cursor.app,
+      cursorOwner.cookie,
+      cursorOwner.orgId,
+      "Support keeps answering the same onboarding questions.",
+    );
+    const priced = await cursor.app.inject({
+      method: "GET",
+      url: `/api/organizations/${cursorOwner.orgId}/engagements/${cursorEngagementId}`,
+      headers: { cookie: cursorOwner.cookie },
+    });
+    const summarized = await cursor.app.inject({
+      method: "POST",
+      url: `/api/organizations/${cursorOwner.orgId}/engagements/${cursorEngagementId}/narrative`,
+      headers: { cookie: cursorOwner.cookie },
+      payload: { privacy: "standard" },
+    });
+    expect(summarized.statusCode).toBe(200);
+    expect(summarized.json().narrative).toBe("A stored summary.");
+    expect(cursorCalls.n).toBe(1);
+    const stillPriced = await cursor.app.inject({
+      method: "GET",
+      url: `/api/organizations/${cursorOwner.orgId}/engagements/${cursorEngagementId}`,
+      headers: { cookie: cursorOwner.cookie },
+    });
+    expect(stillPriced.json().proposal.priceCents).toBe(priced.json().proposal.priceCents);
+    expect(stillPriced.json().engagement.narrative).toBe("A stored summary.");
+    const cursorRestricted = await cursor.app.inject({
+      method: "POST",
+      url: `/api/organizations/${cursorOwner.orgId}/engagements/${cursorEngagementId}/narrative`,
+      headers: { cookie: cursorOwner.cookie },
+      payload: { privacy: "restricted" },
+    });
+    expect(cursorRestricted.statusCode).toBe(409);
+    expect(cursorCalls.n).toBe(1);
+    const unavailable = await start(false, {
+      aiApiKey: "crsr_test_key",
+      aiModel: "grok-4.7",
+      fetchImpl: cursorFetch,
+      cursorRunner: {
+        textOnly: false,
+        async run() {
+          throw new Error("tools-enabled runner must not be called");
+        },
+      },
+    });
+    const blockedOwner = await ownerWorkspace(unavailable.app);
+    const { engagementId: blockedId } = await readyProject(
+      unavailable.app,
+      blockedOwner.cookie,
+      blockedOwner.orgId,
+      "Support keeps answering the same onboarding questions.",
+    );
+    const blocked = await unavailable.app.inject({
+      method: "POST",
+      url: `/api/organizations/${blockedOwner.orgId}/engagements/${blockedId}/narrative`,
+      headers: { cookie: blockedOwner.cookie },
+      payload: { privacy: "standard" },
+    });
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json().error.code).toBe("CURSOR_MODEL_UNAVAILABLE");
+    const blockedView = await unavailable.app.inject({
+      method: "GET",
+      url: `/api/organizations/${blockedOwner.orgId}/engagements/${blockedId}`,
+      headers: { cookie: blockedOwner.cookie },
+    });
+    expect(blockedView.json().engagement.narrative).toBeNull();
+    expect(blockedView.json().proposal.priceCents).toBe(46197);
+    await unavailable.close();
+    await cursor.close();
     const plain = await start();
     const session = actorFromToken(plain.plane.control, "missing");
     expect(session).toBeUndefined();

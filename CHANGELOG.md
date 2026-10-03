@@ -11,4 +11,5 @@
 
 ### Not in this version
 
-- Payment collection, white-label brands, a public production host, and multi-model routing beyond one configured endpoint.
+- White-label brands, a public production host, and multi-model routing beyond one configured endpoint.
+- Marking a project paid without `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and a verified `checkout.session.completed` event.

@@ -25,6 +25,8 @@ Authenticated routes use the `session` cookie.
 | POST | `.../narrative` | Optional model summary. `409` when no provider is allowed |
 | POST | `/api/organizations/:orgId/proposals/:proposalId/accept` | Accept and create the project |
 | GET | `/api/organizations/:orgId/projects/:projectId` | Tasks, executions, artifacts, outcome, blueprint |
+| POST | `/api/organizations/:orgId/projects/:projectId/checkout` | Open Stripe Checkout for the proposal price. `409 PAYMENT_NOT_CONFIGURED` when Stripe secrets are missing |
+| POST | `/api/billing/webhook` | Verify a Stripe signature. Sets `paid` only for a matching `checkout.session.completed` event |
 | POST | `.../run` | Execute until delivered, blocked, or idle |
 | POST | `.../outcomes` | Record the measured after-value |
 | POST | `.../reviews/:taskId` | `retry` or `stop` a human review |

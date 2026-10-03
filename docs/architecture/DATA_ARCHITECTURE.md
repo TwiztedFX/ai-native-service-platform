@@ -6,7 +6,7 @@
 
 ## Tenant database
 
-`data/tenants/{organizationId}.sqlite` stores customers, engagements, answers, requirements, solutions, proposals, approvals, projects, tasks, executions, artifacts, outcomes, blueprints, domain events, agent runs, and tenant audit rows.
+`data/tenants/{organizationId}.sqlite` stores customers, engagements, answers, requirements, solutions, proposals, approvals, projects, payments, tasks, executions, artifacts, outcomes, blueprints, domain events, agent runs, and tenant audit rows.
 
 The file path is accepted only when the organization id is a UUID. Opening the file requires a membership row. Queries still include `organization_id`, so a row written with another organization's id is invisible to the API.
 
@@ -18,8 +18,8 @@ Every stored requirement carries `source`: `customer`, `extracted`, `assumption`
 
 `CustomerCreated`, `RequirementSubmitted`, `RequirementValidated`, `SolutionGenerated`, `ProposalCreated`, `ProposalAccepted`, `ProjectCreated`, `TaskCreated`, `TaskStarted`, `TaskCompleted`, `TaskFailed`, `HumanApprovalRequested`, `HumanApprovalGranted`, `SolutionCompleted`, `BlueprintCreated`, `OutcomeRecorded`, `ProjectCancelled`.
 
-`PaymentReceived`, `DeploymentStarted`, `DeploymentCompleted`, `IncidentCreated`, and `OptimizationProposed` are not emitted. There is no code path that pretends they happened.
+`PaymentReceived`, `DeploymentStarted`, `DeploymentCompleted`, `IncidentCreated`, and `OptimizationProposed` are not emitted. A verified Stripe webhook can set `projects.commercial_status` to `paid`. That update is not a `PaymentReceived` domain event.
 
 ## Planned entities that are not tables
 
-Brand, subscription, invoice, payment, credential vault, and incident. They are listed in the product roadmap and are not created as empty tables.
+Brand, subscription, invoice, credential vault, and incident. They are listed in the product roadmap and are not created as empty tables. `payments` stores a checkout session and becomes paid only from a verified provider event.

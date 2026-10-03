@@ -12,11 +12,16 @@ const tenantEvaluationSql = readFileSync(
   new URL("../../migrations/002_tenant.sql", import.meta.url),
   "utf8",
 );
+const paymentsSql = readFileSync(
+  new URL("../../migrations/003_tenant.sql", import.meta.url),
+  "utf8",
+);
 
 const controlMigrations = [{ id: "001_control", sql: controlSql }] as const;
 const tenantMigrations = [
   { id: "001_tenant", sql: tenantSql },
   { id: "002_tenant_evaluations", sql: tenantEvaluationSql },
+  { id: "003_tenant_payments", sql: paymentsSql },
 ] as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

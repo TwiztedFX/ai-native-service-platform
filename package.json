@@ -12,7 +12,7 @@
     "dev": "node --watch apps/platform/src/server.ts",
     "start": "node apps/platform/src/server.ts",
     "backup": "node apps/platform/src/backup-cli.ts",
-    "test": "node --test packages/domain/src/domain.test.ts packages/providers/src/providers.test.ts apps/platform/test/loop.test.ts apps/platform/test/env.test.ts apps/platform/test/runtime.test.ts",
+    "test": "node --test packages/domain/src/domain.test.ts packages/providers/src/providers.test.ts apps/platform/test/loop.test.ts apps/platform/test/env.test.ts apps/platform/test/runtime.test.ts apps/platform/test/billing.test.ts",
     "typecheck": "tsc --noEmit -p packages/domain/tsconfig.json && tsc --noEmit -p packages/providers/tsconfig.json && tsc --noEmit -p apps/platform/tsconfig.json",
     "lint": "biome check .",
     "format": "biome check --write ."

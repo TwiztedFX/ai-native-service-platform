@@ -15,7 +15,7 @@ The first vertical is **operational runbook production**. It is a real loop, not
 | Task graph, execution, repair, human escalation | Implemented and tested |
 | Independent verification and delivery package | Implemented and tested |
 | Outcome baseline and candidate blueprint | Implemented and tested |
-| OpenAI-compatible narrative adapter | Implemented and tested with a fake network client. Inactive unless `AI_API_KEY` is set in the process environment or a gitignored `.env`. It cannot change price or permissions |
+| Narrative summary | Grok 4.7 is a Cursor model id. A `crsr_` key stays off `api.openai.com`. Other keys still use the OpenAI-compatible client. The summary is stored as text and cannot change price or permissions. Tests use a fake client and do not claim a live model call |
 | Billing, subscriptions, white-label brands | Planned. No payment provider is configured, so acceptance is recorded as `accepted_unbilled` |
 | GitHub remote | Blocked. The signed-in token can read repositories for `TwiztedFX` and cannot create one (`403`) |
 

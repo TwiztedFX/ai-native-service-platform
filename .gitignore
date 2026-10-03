@@ -7,5 +7,6 @@ coverage/
 data/*.sqlite
 data/*.sqlite-*
 data/tenants/
+backups/
 *.log
 .DS_Store

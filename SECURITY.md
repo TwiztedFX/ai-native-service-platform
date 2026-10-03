@@ -22,6 +22,6 @@ Report vulnerabilities privately to the repository owner. Do not open a public i
 - OAuth, SSO, and external secret managers
 - Payment-provider security review
 - Sandboxed code execution for a software-delivery vertical
-- Production network policies, backups, and a hosted staging environment
+- Production network policies and a hosted staging environment. `npm run backup` copies SQLite files and does not encrypt them
 
 This repository has not had an independent penetration test.

@@ -8,7 +8,7 @@ The machine available for the first build has 4 logical processors, 11.8 GB of R
 
 ## Runtime
 
-- `apps/platform/src/server.ts` listens on `127.0.0.1:8787`.
+- `apps/platform/src/server.ts` listens on `HOST` (default `127.0.0.1`) and `PORT` (default `8787`). Set `HOST=0.0.0.0` only behind a TLS proxy.
 - `apps/platform/src/app.ts` is the HTTP boundary used by tests without opening a port.
 - `@platform/domain` is pure TypeScript. It does not open a database or a network connection.
 - `@platform/providers` is the only place that builds an AI HTTP request.

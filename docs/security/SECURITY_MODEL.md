@@ -22,4 +22,4 @@ Each task has a budget in cents equal to its capability cost. If the recorded co
 
 ## Known limits
 
-Local SQLite files are not encrypted at rest. The app binds to loopback. There is no production deployment, backup job, or external audit pipeline in this version.
+Local SQLite files are not encrypted at rest. `npm run backup` copies them with SQLite's backup API and does not encrypt the copies. The process listens on `HOST`, which defaults to `127.0.0.1`. Set `HOST=0.0.0.0` only behind a TLS proxy, with `COOKIE_SECURE=1`. Responses set `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, and a same-origin content security policy without inline scripts. There is no public production host and no external audit pipeline in this version.

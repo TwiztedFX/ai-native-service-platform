@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+export function listenHost(env: NodeJS.ProcessEnv = process.env): string {
+  const value = env.HOST;
+  if (value === undefined) return "127.0.0.1";
+  const trimmed = value.trim();
+  return trimmed || "127.0.0.1";
+}
+
 export function loadEnvFile(file = path.resolve(process.cwd(), ".env")): void {
   if (!existsSync(file)) return;
   const text = readFileSync(file, "utf8");

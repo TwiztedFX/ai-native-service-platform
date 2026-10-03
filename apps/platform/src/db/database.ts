@@ -82,6 +82,17 @@ export class DataPlane {
   }
 }
 
+export function controlSchemaReachable(db: DatabaseSync): boolean {
+  try {
+    const row = db.prepare("SELECT id FROM schema_migrations WHERE id = ?").get("001_control") as
+      | { id: string }
+      | undefined;
+    return row?.id === "001_control";
+  } catch {
+    return false;
+  }
+}
+
 export function migrationSourcePath(): string {
   return fileURLToPath(new URL("../../migrations/001_control.sql", import.meta.url));
 }

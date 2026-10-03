@@ -16,7 +16,7 @@ import {
   registerUser,
   requireTenant,
 } from "./auth/identity.ts";
-import type { DataPlane } from "./db/database.ts";
+import { controlSchemaReachable, type DataPlane } from "./db/database.ts";
 import { run } from "./db/sql.ts";
 import { AppError, now } from "./errors.ts";
 import { createRateLimiter } from "./http/rate-limit.ts";
@@ -44,6 +44,19 @@ import { getEngagement } from "./services/records.ts";
 const uuid = z
   .string()
   .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self'",
+  "font-src 'self'",
+  "connect-src 'self'",
+].join("; ");
 
 const publicDir = fileURLToPath(new URL("../public/", import.meta.url));
 const staticTypes: Record<string, string> = {
@@ -101,6 +114,7 @@ export function buildApp(options: {
     reply.header("x-content-type-options", "nosniff");
     reply.header("referrer-policy", "no-referrer");
     reply.header("x-frame-options", "DENY");
+    reply.header("content-security-policy", contentSecurityPolicy);
     if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS")
       return;
     const origin = request.headers.origin;
@@ -148,6 +162,13 @@ export function buildApp(options: {
     status: "ok",
     aiProvider: config.aiApiKey ? "configured" : "not_configured",
   }));
+
+  app.get("/api/ready", async (_request, reply) => {
+    if (!controlSchemaReachable(plane.control)) {
+      return reply.status(503).send({ status: "not_ready" });
+    }
+    return { status: "ready" };
+  });
 
   app.get("/api/capabilities", async () => ({ capabilities: capabilitiesForVertical() }));
 

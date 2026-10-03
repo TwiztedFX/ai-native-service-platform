@@ -1,10 +1,11 @@
 import { buildApp } from "./app.ts";
 import { DataPlane } from "./db/database.ts";
-import { loadEnvFile } from "./env.ts";
+import { listenHost, loadEnvFile } from "./env.ts";
 
 loadEnvFile();
 
 const port = Number(process.env.PORT ?? 8787);
+const host = listenHost();
 const dataDir = process.env.DATABASE_DIR ?? "./data";
 const plane = new DataPlane({ mode: "file", dataDir });
 const app = buildApp({
@@ -19,8 +20,8 @@ const app = buildApp({
   },
 });
 
-await app.listen({ port, host: "127.0.0.1" });
-console.log(JSON.stringify({ event: "listening", port, host: "127.0.0.1" }));
+await app.listen({ port, host });
+console.log(JSON.stringify({ event: "listening", port, host }));
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {

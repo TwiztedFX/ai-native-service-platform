@@ -6,7 +6,8 @@ Authenticated routes use the `session` cookie.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/health` | Process is up. Reports whether an AI key is set, not the key |
+| GET | `/api/health` | Liveness. Reports whether an AI key is set, not the key. Does not require a key |
+| GET | `/api/ready` | Readiness. `200` only when the control schema is reachable; otherwise `503` |
 | GET | `/api/capabilities` | Capability registry for the runbook vertical |
 | POST | `/api/auth/register` | Create a user and session |
 | POST | `/api/auth/login` | Open a session |

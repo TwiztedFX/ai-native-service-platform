@@ -9,9 +9,11 @@ import {
   buildRequirements,
   composeSolution,
   createDefaultTaskGraph,
+  evaluationReport,
   quoteVertical,
   renderAuthorArtifact,
   routeModel,
+  runOperationalRunbookEvaluation,
   VERIFIER_AGENT,
   verifyPackage,
 } from "./index.ts";
@@ -120,8 +122,40 @@ describe("verification and agents", () => {
     expect(graph.find((task) => task.key === "author_runbook")?.executor).toBe("documentation");
   });
 
-  it("keeps blueprint promotion behind a closed gate", () => {
-    expect(() => assertCanPromote()).toThrow(/PROMOTION_GATE/);
+  it("requires a passing eval and a human approval before promotion", () => {
+    const failed = evaluationReport(["quote-vertical-price"]);
+    expect(failed).toEqual({
+      evalId: "eval-operational-runbook-1",
+      passed: false,
+      failedCaseIds: ["quote-vertical-price"],
+    });
+    expect(() =>
+      assertCanPromote({
+        report: failed,
+        approvalNote: "Approved by an operator.",
+        approverRole: "operator",
+      }),
+    ).toThrow(/PROMOTION_GATE/);
+
+    const passed = runOperationalRunbookEvaluation();
+    expect(passed).toEqual({
+      evalId: "eval-operational-runbook-1",
+      passed: true,
+      failedCaseIds: [],
+    });
+    expect(() =>
+      assertCanPromote({ report: passed, approvalNote: "   ", approverRole: "owner" }),
+    ).toThrow(/PROMOTION_GATE/);
+    expect(() =>
+      assertCanPromote({ report: passed, approvalNote: "Looks good.", approverRole: "customer" }),
+    ).toThrow(/PROMOTION_GATE/);
+    assert.doesNotThrow(() =>
+      assertCanPromote({
+        report: passed,
+        approvalNote: "Approved for reuse after the operational runbook eval.",
+        approverRole: "owner",
+      }),
+    );
   });
 });
 

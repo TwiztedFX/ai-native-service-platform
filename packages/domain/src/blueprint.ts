@@ -1,3 +1,9 @@
+import {
+  hasExplicitHumanApproval,
+  hasPassingOperationalEval,
+  type PromotionDecision,
+} from "./evaluation.ts";
+
 export interface BlueprintSpec {
   vertical: "operational-runbook";
   stage: "candidate";
@@ -37,8 +43,12 @@ export function buildBlueprint(input: {
   };
 }
 
-export function assertCanPromote(): void {
-  throw new Error(
-    "PROMOTION_GATE: a candidate blueprint cannot move forward until an evaluation environment and a separate approval exist.",
-  );
+export function assertCanPromote(input: PromotionDecision): void {
+  const evalPassed = hasPassingOperationalEval(input.report);
+  const approved = hasExplicitHumanApproval(input.approvalNote, input.approverRole);
+  if (!evalPassed || !approved) {
+    throw new Error(
+      "PROMOTION_GATE: a candidate blueprint cannot move forward until an evaluation environment and a separate approval exist.",
+    );
+  }
 }

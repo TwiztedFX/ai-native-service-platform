@@ -1,4 +1,10 @@
-import { assertCanPromote } from "@platform/domain";
+import { randomUUID } from "node:crypto";
+import {
+  assertCanPromote,
+  type EvaluationReport,
+  OPERATIONAL_RUNBOOK_EVAL_ID,
+  runOperationalRunbookEvaluation,
+} from "@platform/domain";
 import { assertRole, type TenantContext } from "../auth/identity.ts";
 import { all, one, run, transaction } from "../db/sql.ts";
 import { AppError, now } from "../errors.ts";
@@ -201,18 +207,111 @@ function closeApproval(ctx: TenantContext, taskId: string, status: string, note:
   );
 }
 
-export function promoteBlueprint(ctx: TenantContext, projectId: string): void {
+export function recordEvaluation(ctx: TenantContext, projectId: string): EvaluationReport {
   assertRole(ctx.role, ["owner", "operator"]);
-  const blueprint = one(
+  projectOrThrow(ctx, projectId);
+  const report = runOperationalRunbookEvaluation();
+  transaction(ctx.tenant, () => {
+    run(ctx.tenant, "DELETE FROM evaluation_reports WHERE project_id = ? AND organization_id = ?", [
+      projectId,
+      ctx.organizationId,
+    ]);
+    run(
+      ctx.tenant,
+      `INSERT INTO evaluation_reports
+        (id, organization_id, project_id, eval_id, passed, failed_case_ids_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        randomUUID(),
+        ctx.organizationId,
+        projectId,
+        report.evalId,
+        report.passed ? 1 : 0,
+        JSON.stringify(report.failedCaseIds),
+        now(),
+      ],
+    );
+    auditTenant(
+      ctx.tenant,
+      ctx.organizationId,
+      ctx.actor.userId,
+      "evaluation.record",
+      "project",
+      projectId,
+    );
+  });
+  return report;
+}
+
+export function promoteBlueprint(
+  ctx: TenantContext,
+  projectId: string,
+  approvalNote: string | undefined,
+): void {
+  const blueprint = one<{ id: string }>(
     ctx.tenant,
     "SELECT id FROM blueprints WHERE project_id = ? AND organization_id = ?",
     [projectId, ctx.organizationId],
   );
   if (!blueprint) throw new AppError(404, "NOT_FOUND", "Blueprint not found.");
   try {
-    assertCanPromote();
+    assertCanPromote({
+      report: storedEvaluation(ctx, projectId),
+      approvalNote,
+      approverRole: ctx.role,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Promotion is blocked.";
     throw new AppError(409, "PROMOTION_GATE", message);
   }
+  const note = approvalNote?.trim() ?? "";
+  transaction(ctx.tenant, () => {
+    const updated = run(
+      ctx.tenant,
+      "UPDATE blueprints SET stage = 'approved' WHERE id = ? AND organization_id = ? AND project_id = ?",
+      [blueprint.id, ctx.organizationId, projectId],
+    );
+    if (updated !== 1) {
+      throw new AppError(409, "PROMOTION_GATE", "Blueprint could not be approved.");
+    }
+    run(
+      ctx.tenant,
+      `INSERT INTO approvals
+        (id, organization_id, subject_type, subject_id, status, requested_at, decided_at, decided_by, note)
+       VALUES (?, ?, 'blueprint', ?, 'granted', ?, ?, ?, ?)`,
+      [randomUUID(), ctx.organizationId, blueprint.id, now(), now(), ctx.actor.userId, note],
+    );
+    auditTenant(
+      ctx.tenant,
+      ctx.organizationId,
+      ctx.actor.userId,
+      "blueprint.promote",
+      "blueprint",
+      blueprint.id,
+    );
+  });
+}
+
+function storedEvaluation(ctx: TenantContext, projectId: string): EvaluationReport | null {
+  const row = one<{ eval_id: string; passed: number; failed_case_ids_json: string }>(
+    ctx.tenant,
+    `SELECT eval_id, passed, failed_case_ids_json
+     FROM evaluation_reports WHERE project_id = ? AND organization_id = ?`,
+    [projectId, ctx.organizationId],
+  );
+  if (!row || row.eval_id !== OPERATIONAL_RUNBOOK_EVAL_ID) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(row.failed_case_ids_json) as unknown;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed) || !parsed.every((item): item is string => typeof item === "string")) {
+    return null;
+  }
+  return {
+    evalId: OPERATIONAL_RUNBOOK_EVAL_ID,
+    passed: row.passed === 1 && parsed.length === 0,
+    failedCaseIds: parsed,
+  };
 }

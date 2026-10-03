@@ -36,4 +36,4 @@ Not started. This vertical delivers documents. It does not deploy customer softw
 
 ## Phase 7 — Optimization
 
-The promotion gate exists and is closed. Automatic promotion is intentionally rejected. An evaluation environment is planned before any candidate can move.
+Promotion requires a stored passing report for `eval-operational-runbook-1` and a non-empty human approval note from a role that is not the customer. The note is an explicit approval. Automatic promotion stays rejected, and promotion does not deploy anything.

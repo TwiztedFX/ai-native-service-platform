@@ -7,6 +7,7 @@ import { expect } from "../../../test/expect.ts";
 import { type AppConfig, buildApp } from "../src/app.ts";
 import { actorFromToken } from "../src/auth/identity.ts";
 import { DataPlane, resolveTenantDatabasePath } from "../src/db/database.ts";
+import { one, run as sqlRun } from "../src/db/sql.ts";
 import { createRateLimiter } from "../src/http/rate-limit.ts";
 
 const answers = {
@@ -458,4 +459,130 @@ describe("boundaries", () => {
     expect(limiter("ip", 2)).toBe(false);
     await ctx.close();
   });
+
+  it("blocks promotion when the stored eval failed", async () => {
+    const ctx = await start();
+    const { cookie, orgId, projectId } = await deliveredProject(ctx);
+    sqlRun(
+      ctx.plane.tenant(orgId),
+      `INSERT INTO evaluation_reports
+        (id, organization_id, project_id, eval_id, passed, failed_case_ids_json, created_at)
+       VALUES (?, ?, ?, 'eval-operational-runbook-1', 0, ?, ?)`,
+      [
+        randomUUID(),
+        orgId,
+        projectId,
+        JSON.stringify(["quote-vertical-price"]),
+        new Date().toISOString(),
+      ],
+    );
+    const promotion = await ctx.app.inject({
+      method: "POST",
+      url: `/api/organizations/${orgId}/projects/${projectId}/blueprint/promote`,
+      headers: { cookie },
+      payload: { approvalNote: "Approved after review." },
+    });
+    expect(promotion.statusCode).toBe(409);
+    expect(promotion.json().error.code).toBe("PROMOTION_GATE");
+    const view = await ctx.app.inject({
+      method: "GET",
+      url: `/api/organizations/${orgId}/projects/${projectId}`,
+      headers: { cookie },
+    });
+    expect(view.json().blueprint.stage).toBe("candidate");
+    expect(view.json().project.status).toBe("delivered");
+    await ctx.close();
+  });
+
+  it("stores a passing eval and still blocks promotion without a human approval", async () => {
+    const ctx = await start();
+    const { cookie, orgId, projectId } = await deliveredProject(ctx);
+    const evaluation = await ctx.app.inject({
+      method: "POST",
+      url: `/api/organizations/${orgId}/projects/${projectId}/evaluations`,
+      headers: { cookie },
+      payload: {},
+    });
+    expect(evaluation.statusCode).toBe(200);
+    expect(evaluation.json().report).toEqual({
+      evalId: "eval-operational-runbook-1",
+      passed: true,
+      failedCaseIds: [],
+    });
+    const stored = one<{ eval_id: string; passed: number }>(
+      ctx.plane.tenant(orgId),
+      "SELECT eval_id, passed FROM evaluation_reports WHERE project_id = ? AND organization_id = ?",
+      [projectId, orgId],
+    );
+    expect(stored?.eval_id).toBe("eval-operational-runbook-1");
+    expect(stored?.passed).toBe(1);
+    const promotion = await ctx.app.inject({
+      method: "POST",
+      url: `/api/organizations/${orgId}/projects/${projectId}/blueprint/promote`,
+      headers: { cookie },
+      payload: {},
+    });
+    expect(promotion.statusCode).toBe(409);
+    expect(promotion.json().error.code).toBe("PROMOTION_GATE");
+    const view = await ctx.app.inject({
+      method: "GET",
+      url: `/api/organizations/${orgId}/projects/${projectId}`,
+      headers: { cookie },
+    });
+    expect(view.json().blueprint.stage).toBe("candidate");
+    await ctx.close();
+  });
+
+  it("approves the blueprint when the eval passed and a human approval note is present", async () => {
+    const ctx = await start();
+    const { cookie, orgId, projectId } = await deliveredProject(ctx);
+    const evaluation = await ctx.app.inject({
+      method: "POST",
+      url: `/api/organizations/${orgId}/projects/${projectId}/evaluations`,
+      headers: { cookie },
+      payload: {},
+    });
+    expect(evaluation.statusCode).toBe(200);
+    const promotion = await ctx.app.inject({
+      method: "POST",
+      url: `/api/organizations/${orgId}/projects/${projectId}/blueprint/promote`,
+      headers: { cookie },
+      payload: { approvalNote: "Approved for reuse after the operational runbook eval." },
+    });
+    expect(promotion.statusCode).toBe(200);
+    const view = await ctx.app.inject({
+      method: "GET",
+      url: `/api/organizations/${orgId}/projects/${projectId}`,
+      headers: { cookie },
+    });
+    expect(view.json().blueprint.stage).toBe("approved");
+    expect(view.json().project.status).toBe("delivered");
+    const approval = one<{ note: string; status: string }>(
+      ctx.plane.tenant(orgId),
+      "SELECT note, status FROM approvals WHERE organization_id = ? AND subject_type = 'blueprint'",
+      [orgId],
+    );
+    expect(approval?.note).toBe("Approved for reuse after the operational runbook eval.");
+    expect(approval?.status).toBe("granted");
+    await ctx.close();
+  });
 });
+
+async function deliveredProject(ctx: Awaited<ReturnType<typeof start>>) {
+  const { cookie, orgId } = await ownerWorkspace(ctx.app);
+  const { projectId } = await readyProject(
+    ctx.app,
+    cookie,
+    orgId,
+    "New clients wait because onboarding lives in an inbox.",
+  );
+  const run = await ctx.app.inject({
+    method: "POST",
+    url: `/api/organizations/${orgId}/projects/${projectId}/run`,
+    headers: { cookie },
+    payload: {},
+  });
+  expect(run.statusCode).toBe(200);
+  expect(run.json().blueprint.stage).toBe("candidate");
+  return { cookie, orgId, projectId };
+}

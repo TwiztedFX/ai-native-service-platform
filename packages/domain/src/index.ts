@@ -30,6 +30,14 @@ export {
   openQuestions,
   questionByKey,
 } from "./discovery.ts";
+export type { ApproverRole, EvaluationReport, PromotionDecision } from "./evaluation.ts";
+export {
+  evaluationReport,
+  hasExplicitHumanApproval,
+  hasPassingOperationalEval,
+  OPERATIONAL_RUNBOOK_EVAL_ID,
+  runOperationalRunbookEvaluation,
+} from "./evaluation.ts";
 export type { DomainEventType } from "./events.ts";
 export { assertEventType, domainEventTypes, eventLabels } from "./events.ts";
 export { parseBaseline } from "./outcomes.ts";

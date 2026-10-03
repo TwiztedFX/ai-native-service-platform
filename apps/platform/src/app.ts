@@ -37,6 +37,7 @@ import {
   decideReview,
   projectView,
   promoteBlueprint,
+  recordEvaluation,
   recordOutcome,
 } from "./services/projects.ts";
 import { getEngagement } from "./services/records.ts";
@@ -337,9 +338,18 @@ export function buildApp(options: {
     return projectView(ctx, params.projectId);
   });
 
+  app.post("/api/organizations/:orgId/projects/:projectId/evaluations", async (request) => {
+    const params = z.object({ orgId: uuid, projectId: uuid }).parse(request.params);
+    const report = recordEvaluation(tenantOf(request, params.orgId), params.projectId);
+    return { report };
+  });
+
   app.post("/api/organizations/:orgId/projects/:projectId/blueprint/promote", async (request) => {
     const params = z.object({ orgId: uuid, projectId: uuid }).parse(request.params);
-    promoteBlueprint(tenantOf(request, params.orgId), params.projectId);
+    const body = z
+      .object({ approvalNote: z.string().max(500).optional() })
+      .parse(request.body ?? {});
+    promoteBlueprint(tenantOf(request, params.orgId), params.projectId, body.approvalNote);
     return { ok: true };
   });
 

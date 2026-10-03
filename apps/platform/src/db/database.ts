@@ -8,6 +8,16 @@ const controlSql = readFileSync(
   "utf8",
 );
 const tenantSql = readFileSync(new URL("../../migrations/001_tenant.sql", import.meta.url), "utf8");
+const tenantEvaluationSql = readFileSync(
+  new URL("../../migrations/002_tenant.sql", import.meta.url),
+  "utf8",
+);
+
+const controlMigrations = [{ id: "001_control", sql: controlSql }] as const;
+const tenantMigrations = [
+  { id: "001_tenant", sql: tenantSql },
+  { id: "002_tenant_evaluations", sql: tenantEvaluationSql },
+] as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -29,16 +39,28 @@ function connect(filename: string, kind: "control" | "tenant"): DatabaseSync {
   db.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL)",
   );
-  const id = kind === "control" ? "001_control" : "001_tenant";
-  const existing = db.prepare("SELECT id FROM schema_migrations WHERE id = ?").get(id);
-  if (!existing) {
-    db.exec(kind === "control" ? controlSql : tenantSql);
-    db.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)").run(
-      id,
-      new Date().toISOString(),
-    );
+  const applied = db.prepare("SELECT id FROM schema_migrations WHERE id = ?");
+  const insert = db.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)");
+  for (const migration of migrationsFor(kind)) {
+    if (!applied.get(migration.id)) {
+      db.exec(migration.sql);
+      insert.run(migration.id, new Date().toISOString());
+    }
   }
   return db;
+}
+
+function migrationsFor(kind: "control" | "tenant"): readonly { id: string; sql: string }[] {
+  switch (kind) {
+    case "control":
+      return controlMigrations;
+    case "tenant":
+      return tenantMigrations;
+    default: {
+      const unexpected: never = kind;
+      throw new Error(`Unknown database kind: ${String(unexpected)}`);
+    }
+  }
 }
 
 export class DataPlane {

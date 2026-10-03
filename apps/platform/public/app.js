@@ -186,6 +186,11 @@ function projectPanel() {
   return `<article class="grid">
     <h2>Project · ${escapeHtml(project.project.status)}</h2>
     <p class="meta">Commercial status: ${escapeHtml(project.project.commercialStatus)}</p>
+    ${
+      project.project.commercialStatus === "paid"
+        ? ""
+        : `<button id="checkout" type="button">Open checkout</button>`
+    }
     <ul>${project.tasks.map((task) => `<li>${escapeHtml(task.title)} · ${escapeHtml(task.executor)} · ${escapeHtml(task.status)} · attempts ${task.attempts}</li>`).join("")}</ul>
     <div class="row">
       ${project.project.status === "ready" || project.project.status === "running" ? `<button id="run" type="button">Run fulfillment</button>` : ""}
@@ -293,6 +298,20 @@ function bind() {
         method: "POST",
         body: {},
       });
+      await openEngagement(state.detail.engagement.id);
+    }),
+  );
+  document.querySelector("#checkout")?.addEventListener("click", () =>
+    act(async () => {
+      const result = await api(
+        `/api/organizations/${state.orgId}/projects/${state.project.project.id}/checkout`,
+        { method: "POST", body: {} },
+      );
+      if (result.url) {
+        window.location.assign(result.url);
+        return;
+      }
+      state.notice = "Checkout is open. Payment is recorded only after Stripe confirms it.";
       await openEngagement(state.detail.engagement.id);
     }),
   );

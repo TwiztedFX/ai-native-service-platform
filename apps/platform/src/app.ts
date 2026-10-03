@@ -16,6 +16,9 @@ import {
   registerUser,
   requireTenant,
 } from "./auth/identity.ts";
+import { applyVerifiedWebhook, openCheckout } from "./billing/payments.ts";
+import { captureRawBody, readRawBody } from "./billing/raw-body.ts";
+import { billingConfigured, verifyStripeSignature } from "./billing/stripe.ts";
 import type { DataPlane } from "./db/database.ts";
 import { run } from "./db/sql.ts";
 import { AppError, now } from "./errors.ts";
@@ -60,6 +63,8 @@ export interface AppConfig {
   aiBaseUrl?: string | undefined;
   aiModel: string;
   fetchImpl?: typeof fetch | undefined;
+  stripeSecretKey?: string | undefined;
+  stripeWebhookSecret?: string | undefined;
 }
 
 function readCookie(header: string | undefined, name: string): string | undefined {
@@ -95,6 +100,24 @@ export function buildApp(options: {
     logger: process.env.NODE_TEST_CONTEXT
       ? false
       : { level: "info", redact: ["req.headers.authorization", "req.headers.cookie"] },
+  });
+  app.removeContentTypeParser("application/json");
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (request, body, done) => {
+    const raw = typeof body === "string" ? body : body.toString("utf8");
+    if (raw.length === 0) {
+      const error = new Error("Body cannot be empty.") as Error & { statusCode?: number };
+      error.statusCode = 400;
+      done(error, undefined);
+      return;
+    }
+    if (request.url.split("?")[0] === "/api/billing/webhook") captureRawBody(request, raw);
+    try {
+      done(null, JSON.parse(raw) as unknown);
+    } catch {
+      const error = new Error("Request is invalid.") as Error & { statusCode?: number };
+      error.statusCode = 400;
+      done(error, undefined);
+    }
   });
 
   app.addHook("onRequest", async (request, reply) => {
@@ -304,6 +327,39 @@ export function buildApp(options: {
   app.get("/api/organizations/:orgId/projects/:projectId", async (request) => {
     const params = z.object({ orgId: uuid, projectId: uuid }).parse(request.params);
     return projectView(tenantOf(request, params.orgId), params.projectId);
+  });
+
+  app.post("/api/organizations/:orgId/projects/:projectId/checkout", async (request) => {
+    const params = z.object({ orgId: uuid, projectId: uuid }).parse(request.params);
+    z.object({})
+      .passthrough()
+      .parse(request.body ?? {});
+    if (!billingConfigured(config.stripeSecretKey, config.stripeWebhookSecret)) {
+      throw new AppError(409, "PAYMENT_NOT_CONFIGURED", "Payment is not configured.");
+    }
+    const host = request.headers.host;
+    if (!host || /[\s/]/.test(host)) throw new AppError(400, "VALIDATION", "Host is missing.");
+    const origin = `${config.cookieSecure ? "https" : "http"}://${host}`;
+    return openCheckout(tenantOf(request, params.orgId), params.projectId, {
+      fetchImpl: config.fetchImpl ?? fetch,
+      secretKey: config.stripeSecretKey ?? "",
+      successUrl: `${origin}/?checkout=return`,
+      cancelUrl: `${origin}/?checkout=cancel`,
+    });
+  });
+
+  app.post("/api/billing/webhook", async (request) => {
+    if (!billingConfigured(config.stripeSecretKey, config.stripeWebhookSecret)) {
+      throw new AppError(409, "PAYMENT_NOT_CONFIGURED", "Payment is not configured.");
+    }
+    const signature = request.headers["stripe-signature"];
+    const valid = verifyStripeSignature(
+      readRawBody(request),
+      signature,
+      config.stripeWebhookSecret ?? "",
+    );
+    if (!valid) throw new AppError(400, "INVALID_SIGNATURE", "Webhook signature is invalid.");
+    return applyVerifiedWebhook(plane, request.body);
   });
 
   app.post("/api/organizations/:orgId/projects/:projectId/run", async (request) => {

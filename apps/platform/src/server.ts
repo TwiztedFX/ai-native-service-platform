@@ -16,6 +16,8 @@ const app = buildApp({
     aiApiKey: process.env.AI_API_KEY,
     aiBaseUrl: process.env.AI_BASE_URL,
     aiModel: process.env.AI_MODEL?.trim() || "",
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
 });
 
